@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0B0E14">
+    <meta name="description" content="Calculadora de inversión y simulador de minería BTC para salones NewGamers.">
+    <title>Salones BTC — Terminal de inversión</title>
+    <script>
+        // Cambia a true para mostrar el preloader en cada carga.
+        window.PRELOADER_SHOW_EVERY_TIME = false;
+        (() => {
+            const key = "salones-btc-preloader-v3-seen";
+            try {
+                const show = window.PRELOADER_SHOW_EVERY_TIME || !sessionStorage.getItem(key);
+                if (!show) return;
+                sessionStorage.setItem(key, "1");
+                document.documentElement.classList.add("preloader-active");
+                window.__preloaderFallback = window.setTimeout(() => {
+                    if (!document.documentElement.classList.contains("preloader-active")) return;
+                    document.getElementById("intro-screen")?.remove();
+                    document.documentElement.classList.remove("preloader-active");
+                    document.documentElement.classList.add("page-ready");
+                    document.dispatchEvent(new CustomEvent("preloader:done"));
+                }, 8000);
+            } catch (_) {
+                // Si el almacenamiento no está disponible, se omite el preloader.
+            }
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="btc-bg-pattern">
+    <div id="intro-screen" class="intro-screen" role="status" aria-live="polite" aria-label="Cargando Calculadora Salones BTC" tabindex="-1">
+        <div class="preloader-grid" aria-hidden="true"></div>
+        <div class="preloader-content">
+            <div class="preloader-logo-wrap"><img class="preloader-logo" src="logo.png" alt="Logo de Salones BTC"></div>
+            <p class="preloader-kicker">NEWGAMERS <span>·</span> BTC TERMINAL</p>
+            <h1 class="preloader-title">Preparando tu <span>terminal</span></h1>
+            <div class="chain-loader" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+            <p id="preloader-message" class="preloader-message">Encendiendo motores...</p>
+            <div class="preloader-progress-row">
+                <div id="preloader-progress" class="preloader-progress" role="progressbar" aria-label="Progreso de carga" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="preloader-progress-fill"></span></div>
+                <span id="preloader-percent" class="preloader-percent">00%</span>
+            </div>
+            <button id="preloader-skip" class="preloader-skip" type="button" hidden>Saltar</button>
+        </div>
+    </div>
+    <header class="site-header">
+        <div class="header-inner">
+            <a class="brand" href="#" aria-label="Salones BTC, inicio">
+                <span class="brand-logo-frame" aria-hidden="true"><img class="brand-logo" src="logo.png" alt=""></span>
+                <span class="brand-copy">
+                    <strong>Salones <span>BTC</span></strong>
+                    <small>NEWGAMERS · INVESTMENT TERMINAL</small>
+                </span>
+            </a>
+
+            <section class="market-ticker" aria-label="Cotización Bitcoin en vivo">
+                <span class="market-label"><i class="live-dot"></i> BTC / USD</span>
+                <span id="header-btc-price" class="ticker-price skeleton">$80,450 USD</span>
+                <span id="btc-trend-icon" class="ticker-trend" aria-label="Sin cambio">▲</span>
+                <span id="btc-change" class="ticker-change">—</span>
+                <svg id="btc-sparkline" class="sparkline" viewBox="0 0 108 34" role="img" aria-label="Gráfica del precio de Bitcoin">
+                    <polyline points="0,26 18,20 36,22 54,13 72,18 90,8 108,11"></polyline>
+                </svg>
+                <span id="btc-updated" class="ticker-updated">Conectando...</span>
+                <button id="refresh-btc" class="icon-button refresh-button" type="button" aria-label="Actualizar precio BTC" title="Actualizar precio">↻</button>
+            </section>
+
+            <div class="header-actions">
+                <span id="sync-status" class="status-pill"><i class="live-dot"></i> EN VIVO</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-shell">
+        <section class="welcome-row">
+            <div>
+                <p class="eyebrow">PANEL DE CONTROL <span> / </span> NEWGAMERS</p>
+                <h1>Calculadora de <span>salones BTC</span></h1>
+                <p class="page-description">Proyecta tu inversión en GPU y monitorea el rendimiento de minería.</p>
+            </div>
+            <div class="market-state"><span class="market-state-icon">↗</span><span>Mercado<br><strong>Bitcoin</strong></span></div>
+        </section>
+
+        <nav class="tab-bar" role="tablist" aria-label="Secciones de la calculadora">
+            <button id="tab-btn-calculadora" class="tab-button is-active" type="button" role="tab" aria-selected="true" aria-controls="tab-content-calculadora" onclick="switchTab('calculadora')"><span aria-hidden="true">▦</span> Calculadora</button>
+            <button id="tab-btn-generador" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="tab-content-generador" onclick="switchTab('generador')"><span aria-hidden="true">⌁</span> Generador &amp; Minería</button>
+        </nav>
+
+        <div id="price-error-banner" class="notice notice-warning hidden" role="status">
+                <span aria-hidden="true">!</span><span id="price-error-text">No se pudo actualizar el precio. Espera un momento; volveremos a intentarlo automáticamente.</span>
+            <button id="dismiss-price-error" class="notice-dismiss" type="button" aria-label="Cerrar aviso">×</button>
+        </div>
+
+        <section id="tab-content-calculadora" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-calculadora">
+            <div class="calculator-grid">
+                <div class="config-column">
+                    <section class="panel config-panel">
+                        <div class="panel-heading">
+                            <div><span class="section-index">01</span><div><h2>Configuración</h2><p>Personaliza tu proyección</p></div></div>
+                            <span class="panel-icon" aria-hidden="true">⚙</span>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="package-selector-btn">Paquete de GPU</label>
+                            <button id="package-selector-btn" class="package-select-button" type="button" onclick="openPackageModal()" aria-haspopup="dialog" aria-controls="package-modal">
+                                <span class="package-select-icon" aria-hidden="true">▦</span>
+                                <span class="package-select-copy"><strong id="selected-package-name">Selecciona un paquete...</strong><small id="selected-package-desc">Explora los niveles disponibles</small></span>
+                                <span id="package-selector-action" class="select-label">Seleccionar <span aria-hidden="true">⌄</span></span>
+                            </button>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="salones-input">Cantidad de salones / tiendas</label>
+                            <div class="input-wrap"><input type="number" id="salones-input" value="1" min="1" max="100" step="1" inputmode="numeric" enterkeyhint="done" aria-label="Cantidad de salones, de 1 a 100"><span class="input-suffix">TIENDAS</span></div>
+                        </div>
+
+                        <div class="field-group">
+                            <div class="field-label-row"><label for="btc-price-input">Precio BTC de referencia</label><button id="toggle-btc-mode" class="text-button" type="button">Usar Manual</button></div>
+                            <div class="input-wrap"><span class="input-prefix">$</span><input type="number" id="btc-price-input" value="80450" min="0" step="1" inputmode="decimal" aria-describedby="btc-price-help"><span class="input-suffix">USD</span></div>
+                            <p id="btc-price-help" class="field-help">Precio de mercado sincronizado automáticamente.</p>
+                        </div>
+
+                    </section>
+
+                    <section class="panel converter-panel">
+                        <div class="panel-heading compact">
+                            <div><span class="section-index">↔</span><div><h2>Conversor rápido</h2><p>USD · BTC · satoshis</p></div></div>
+                        </div>
+                        <div class="converter-fields">
+                            <label class="converter-field"><span>USD</span><input id="converter-usd" type="number" min="0" step="any" value="1000" aria-label="Cantidad en dólares estadounidenses"></label>
+                            <span class="converter-equals" aria-hidden="true">⇄</span>
+                            <label class="converter-field"><span>BTC</span><input id="converter-btc" type="number" min="0" step="any" aria-label="Cantidad en Bitcoin"></label>
+                        </div>
+                        <p class="satoshi-line">Satoshis <strong id="converter-sats">— sats</strong></p>
+                    </section>
+                </div>
+
+                <div class="results-column">
+                    <section class="panel gpu-panel">
+                        <div class="panel-heading">
+                            <div><span class="section-index">02</span><div><h2>Desglose de hardware</h2><p>Costos por tarjeta y cantidad total</p></div></div>
+                            <span class="unit-caption">USD / UNIDAD</span>
+                        </div>
+                        <div id="cpus-container" class="gpu-list">
+                            <article id="cpu-card-roja" class="gpu-card hidden">
+                                <div class="gpu-identity"><span class="gpu-chip gpu-red">01</span><div><h3>GT 710 <span class="gpu-tier tier-red">Básico</span></h3><p>Rendimiento inicial de entrada</p></div></div>
+                                <div class="gpu-metrics"><label>CANT. <input id="input-qty-roja" type="number" value="0" readonly aria-label="Cantidad total de GT 710"></label><div><strong id="subtotal-roja">$0 USD</strong><small id="unit-roja">Unit: $150</small></div></div>
+                            </article>
+                            <article id="cpu-card-azul" class="gpu-card hidden">
+                                <div class="gpu-identity"><span class="gpu-chip gpu-blue">02</span><div><h3>GTX 1050 Ti <span class="gpu-tier tier-blue">Intermedio</span></h3><p>Eficiencia media equilibrada</p></div></div>
+                                <div class="gpu-metrics"><label>CANT. <input id="input-qty-azul" type="number" value="0" readonly aria-label="Cantidad total de GTX 1050 Ti"></label><div><strong id="subtotal-azul">$0 USD</strong><small id="unit-azul">Unit: $280</small></div></div>
+                            </article>
+                            <article id="cpu-card-amarilla" class="gpu-card hidden">
+                                <div class="gpu-identity"><span class="gpu-chip gpu-yellow">03</span><div><h3>GTX 1660 <span class="gpu-tier tier-yellow">Avanzado</span></h3><p>Alto poder de procesamiento</p></div></div>
+                                <div class="gpu-metrics"><label>CANT. <input id="input-qty-amarilla" type="number" value="0" readonly aria-label="Cantidad total de GTX 1660"></label><div><strong id="subtotal-amarilla">$0 USD</strong><small id="unit-amarilla">Unit: $450</small></div></div>
+                            </article>
+                            <article id="cpu-card-gris" class="gpu-card hidden">
+                                <div class="gpu-identity"><span class="gpu-chip gpu-slate">04</span><div><h3>RTX 2060 <span class="gpu-tier tier-slate">Pro</span></h3><p>Potencia de nueva generación</p></div></div>
+                                <div class="gpu-metrics"><label>CANT. <input id="input-qty-gris" type="number" value="0" readonly aria-label="Cantidad total de RTX 2060"></label><div><strong id="subtotal-gris">$0 USD</strong><small id="unit-gris">Unit: $650</small></div></div>
+                            </article>
+                            <article id="cpu-card-verde" class="gpu-card hidden">
+                                <div class="gpu-identity"><span class="gpu-chip gpu-green">05</span><div><h3>RTX 3090 <span class="gpu-tier tier-green">Elite</span></h3><p>Máxima potencia industrial</p></div></div>
+                                <div class="gpu-metrics"><label>CANT. <input id="input-qty-verde" type="number" value="0" readonly aria-label="Cantidad total de RTX 3090"></label><div><strong id="subtotal-verde">$0 USD</strong><small id="unit-verde">Unit: $1,400</small></div></div>
+                            </article>
+                            <div id="empty-gpu-state" class="empty-state"><span aria-hidden="true">▧</span><p>Selecciona un paquete para ver el desglose de hardware.</p></div>
+                        </div>
+                    </section>
+
+                    <section id="grand-total-card" class="total-card">
+                        <div class="total-copy"><span class="total-kicker"><i class="live-dot"></i> INVERSIÓN TOTAL</span><p id="grand-total-subtitle">Selecciona un paquete para calcular</p></div>
+                        <div class="total-value-row"><div id="grand-total-wrapper"><strong id="total-general" aria-live="polite">$0 USD</strong><span>USD NETOS · <b id="total-btc-equivalent">— BTC</b></span></div><div class="summary-actions"><button id="copy-summary-button" class="button-primary" type="button" onclick="copySummary()"><span aria-hidden="true">▣</span> Copiar resumen</button><button id="share-summary-button" class="button-secondary" type="button">Compartir</button><button id="export-summary-button" class="button-secondary" type="button">Exportar</button></div></div>
+                    </section>
+
+                    <section id="salon-generation-card" class="generation-card hidden">
+                        <div><span class="generation-icon" aria-hidden="true">↗</span><div><strong>Generación estimada</strong><small>Por ciclo de 84 horas</small></div></div>
+                        <strong id="btc-generation-output">0.00000000 BTC</strong>
+                    </section>
+                </div>
+            </div>
+
+            <section class="panel comparison-panel">
+                <div class="panel-heading"><div><span class="section-index">03</span><div><h2>Comparador de paquetes</h2><p>Compara inversión y retorno estimado por salón</p></div></div><span class="unit-caption">PROYECCIÓN · 84 H</span></div>
+                <div id="package-comparison" class="comparison-grid"></div>
+                <p class="disclaimer">ROI estimado con la generación base actual del simulador. Proyección informativa, no representa una garantía de rendimiento.</p>
+            </section>
+
+            <section class="panel history-panel">
+                <div class="panel-heading"><div><span class="section-index">↺</span><div><h2>Historial de cálculos</h2><p>Guardado en este dispositivo</p></div></div><button id="clear-history" class="text-button danger-text" type="button">Borrar historial</button></div>
+                <div id="calculation-history" class="history-list"><p class="history-empty">Tus cálculos recientes aparecerán aquí.</p></div>
+            </section>
+        </section>
+
+        <section id="tab-content-generador" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-btn-generador">
+            <section class="panel miner-panel">
+                <div class="miner-heading">
+                    <div><p class="eyebrow">CENTRO DE MINERÍA <span> / </span> SIMULADOR</p><h2>Generador &amp; Minería</h2><p class="page-description">Proyección de rendimiento basada en el tiempo de operación.</p></div>
+                    <div class="mining-status"><i class="live-dot"></i><span id="miner-status-badge">MINANDO</span></div>
+                </div>
+                <div class="miner-grid">
+                    <div class="miner-controls">
+                        <label class="field-group" for="miner-hours-input"><span class="field-caption">DURACIÓN DEL CICLO</span><span class="input-wrap"><input type="number" id="miner-hours-input" value="84" min="1" max="10000" inputmode="numeric" oninput="updateMinerSimulation()"><span class="input-suffix">HORAS</span></span></label>
+                        <div class="miner-timer-actions">
+                            <button id="miner-start-button" class="button-primary" type="button">▶ Iniciar minería</button>
+                            <button id="reset-miner-button" class="button-secondary" type="button" onclick="resetMinerTimer()">↺ Reiniciar reloj</button>
+                        </div>
+                        <div class="progress-card">
+                            <div class="progress-head"><span class="field-caption">PROGRESO DEL CICLO</span><span id="miner-time-remaining">Restante: 84h 0m</span></div>
+                            <div class="progress-ring" id="miner-progress-ring" role="progressbar" aria-label="Progreso del ciclo de minería" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="ring-inner"><strong id="miner-progress-text">0.0%</strong><small>COMPLETADO</small></div></div>
+                            <div class="progress-track"><span id="miner-progress-bar"></span></div>
+                        </div>
+                    </div>
+                    <div class="miner-output-card"><span class="field-caption">GENERACIÓN TOTAL ESTIMADA</span><strong id="miner-total-btc">7.60962581 BTC</strong><span id="miner-btc-usd-val">Valor aprox: $612,245 USD</span><div class="miner-output-meta"><span>PRECIO BTC</span><strong id="miner-effective-price">—</strong></div></div>
+                </div>
+                <div class="production-section"><div class="production-heading"><div><h3>Proyección de producción</h3><p>Estimado lineal al ritmo configurado</p></div><span class="production-badge">BTC + USD</span></div>
+                    <div class="table-scroll"><table class="production-table"><thead><tr><th>PERÍODO</th><th>TIEMPO</th><th>PRODUCCIÓN BTC</th><th>VALOR ESTIMADO</th></tr></thead><tbody><tr><td>Por hora</td><td>1 hora</td><td id="production-hour-btc">—</td><td id="production-hour-usd">—</td></tr><tr><td>Por día</td><td>24 horas</td><td id="production-day-btc">—</td><td id="production-day-usd">—</td></tr><tr><td>Por semana</td><td>168 horas</td><td id="production-week-btc">—</td><td id="production-week-usd">—</td></tr></tbody></table></div>
+                </div>
+                <div class="miner-footer"><p><span aria-hidden="true">ⓘ</span> El cálculo usa una generación proporcional de 7.60962581 BTC por 84 horas.</p><label class="sound-toggle"><input id="sound-toggle" type="checkbox"><span class="toggle-track"></span> Sonido al completar</label></div>
+            </section>
+        </section>
+        <footer class="app-footer"><span>NEWGAMERS <span class="footer-separator">·</span> BTC TERMINAL</span><span>Las estimaciones son referenciales.</span><span>Elaborado por <strong>Yohana / Lyria_Banks</strong></span></footer>
+    </main>
+
+    <div id="package-modal" class="modal-backdrop hidden" role="presentation">
+        <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description" tabindex="-1">
+            <div class="modal-heading"><div><span class="modal-icon">▦</span><div><h2 id="modal-title">Seleccionar paquete GPU</h2><p id="modal-description">Elige el nivel que mejor se adapta a tu operación.</p></div></div><button id="modal-close" class="icon-button" type="button" onclick="closePackageModal()" aria-label="Cerrar selector de paquetes">×</button></div>
+            <div class="package-options">
+                <button class="package-option option-basic" type="button" data-package="basico"><span class="option-mark">01</span><span class="option-copy"><strong>Básico</strong><small>10x GT 710 Rojas + 10x GTX 1050 Ti Azules</small><span class="option-spec">20 GPU <i>·</i> NIVEL DE ENTRADA</span></span><span class="option-action">Elegir <b>→</b></span></button>
+                <button class="package-option option-mid" type="button" data-package="intermedio"><span class="option-mark">02</span><span class="option-copy"><strong>Intermedio</strong><small>10x GTX 1050 Ti Azules + 10x GTX 1660 Amarillas</small><span class="option-spec">20 GPU <i>·</i> NIVEL EQUILIBRADO</span></span><span class="option-action">Elegir <b>→</b></span></button>
+                <button class="package-option option-advanced" type="button" data-package="avanzado"><span class="option-mark">03</span><span class="option-copy"><strong>Avanzado</strong><small>10x GTX 1660 + 5x RTX 2060 + 5x RTX 3090</small><span class="option-spec">20 GPU <i>·</i> ALTO RENDIMIENTO</span></span><span class="option-action">Elegir <b>→</b></span></button>
+            </div>
+            <p class="modal-hint"><span class="keyboard-hint">Usa <kbd>Tab</kbd> para navegar · <kbd>Esc</kbd> para cerrar</span><span class="touch-hint">Toca un paquete para seleccionarlo. Toca × para cerrar.</span></p>
+        </section>
+    </div>
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+    <script src="script.js"></script>
+</body>
+</html>
